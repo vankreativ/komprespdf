@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gabung & Kompres PDF</title>
+<style>
+  :root{
+    --bg:#101418;
+    --panel:#171D24;
+    --panel-2:#1D242C;
+    --ink:#E7EAEE;
+    --muted:#8B95A1;
+    --muted-2:#5C6773;
+    --line:#262F39;
+    --accent:#FF6A3D;
+    --accent-2:#33D6A6;
+    --accent-2-dim:#173A30;
+    --warn:#F2C14E;
+    --track:#20282F;
+    --mono: 'SFMono-Regular','Consolas','Menlo','Courier New',monospace;
+    --sans: -apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh;padding:40px 20px 80px;}
+  .wrap{max-width:660px;margin:0 auto;}
+  .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:10px;}
+  h1{font-size:27px;line-height:1.25;margin:0 0 8px;font-weight:700;letter-spacing:-.01em;}
+  .subtitle{color:var(--muted);font-size:14.5px;line-height:1.55;margin:0 0 26px;max-width:56ch;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:16px;}
+
+  /* mode selector */
+  .modes{display:flex;gap:8px;margin-bottom:16px;}
+  .mode-btn{
+    flex:1;background:var(--panel-2);border:1px solid var(--line);color:var(--muted);
+    font-family:var(--sans);font-size:12.5px;font-weight:600;padding:11px 6px;border-radius:9px;
+    cursor:pointer;text-align:center;transition:all .15s ease;line-height:1.3;
+  }
+  .mode-btn.active{background:var(--accent);border-color:var(--accent);color:#1A0D07;}
+  .mode-btn:not(.active):hover{border-color:var(--muted-2);color:var(--ink);}
+
+  .dropzone{border:1.5px dashed var(--line);border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:border-color .15s ease, background .15s ease;}
+  .dropzone:hover, .dropzone.drag{border-color:var(--accent);background:rgba(255,106,61,0.04);}
+  .dropzone .icon{width:36px;height:36px;margin:0 auto 12px;border:1.5px solid var(--muted-2);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px;font-family:var(--mono);}
+  .dropzone .main{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .dropzone .hint{font-size:12px;color:var(--muted-2);}
+  input[type=file]{display:none;}
+
+  .filelist{margin-top:16px;display:none;}
+  .filelist.show{display:block;}
+  .filelist-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .filelist-head .label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;}
+  .filelist-head .total{font-family:var(--mono);font-size:12.5px;color:var(--muted);}
+  .filerow{
+    display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:grab;
+  }
+  .filerow.dragging{opacity:.4;}
+  .filerow .order{
+    font-family:var(--mono);font-size:11px;color:var(--muted-2);width:18px;text-align:center;flex-shrink:0;
+  }
+  .filerow .fname{flex:1;min-width:0;}
+  .filerow .fname .n{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .filerow .fname .s{font-size:11px;color:var(--muted);margin-top:1px;}
+  .filerow .btns{display:flex;gap:3px;flex-shrink:0;}
+  .filerow button{
+    background:none;border:1px solid var(--line);color:var(--muted);width:24px;height:24px;
+    border-radius:6px;cursor:pointer;font-size:12px;line-height:1;padding:0;font-family:var(--sans);
+  }
+  .filerow button:hover{border-color:var(--muted-2);color:var(--ink);}
+  .filerow button.rm:hover{border-color:var(--warn);color:var(--warn);}
+  .addmore{font-size:12px;color:var(--accent);cursor:pointer;text-align:center;padding:8px;border:1px dashed var(--line);border-radius:9px;margin-top:2px;}
+  .addmore:hover{border-color:var(--accent);}
+
+  .bignum{font-family:var(--mono);font-weight:700;font-size:28px;letter-spacing:-.02em;}
+  .bignum .unit{font-size:15px;color:var(--muted);margin-left:4px;font-weight:500;}
+
+  .target-section{display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);}
+  .target-section.show{display:block;}
+  .target-row{display:flex;gap:10px;align-items:flex-end;}
+  .field{flex:1;}
+  label.flabel{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600;}
+  input[type=number]{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:18px;font-weight:700;padding:10px 12px;border-radius:9px;outline:none;}
+  input[type=number]:focus{border-color:var(--accent);}
+  select{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-family:var(--sans);font-size:14px;padding:10px 10px;border-radius:9px;outline:none;cursor:pointer;}
+
+  .note{font-size:12px;color:var(--muted-2);line-height:1.5;margin-top:14px;}
+  .note b{color:var(--warn);font-weight:600;}
+
+  .cta{width:100%;margin-top:18px;background:var(--accent);color:#1A0D07;border:none;font-family:var(--sans);font-weight:700;font-size:14.5px;padding:14px;border-radius:10px;cursor:pointer;transition:transform .08s ease, opacity .15s ease;}
+  .cta:active{transform:scale(.98);}
+  .cta:disabled{opacity:.35;cursor:not-allowed;}
+
+  .gauge-wrap{display:none;}
+  .gauge-wrap.show{display:block;}
+  .gauge-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;font-family:var(--mono);}
+  .track{position:relative;height:16px;background:var(--track);border-radius:8px;overflow:visible;margin-bottom:6px;}
+  .fill{position:absolute;top:0;left:0;height:100%;border-radius:8px;background:var(--accent);width:0%;transition:width .35s cubic-bezier(.2,.7,.3,1), background .3s ease;}
+  .fill.hit{background:var(--accent-2);}
+  .target-marker{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);left:0%;}
+  .target-marker::after{content:'TARGET';position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:9px;letter-spacing:.05em;color:var(--ink);white-space:nowrap;font-family:var(--mono);}
+  .gauge-ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted-2);font-family:var(--mono);margin-top:2px;}
+  .progress-text{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:16px;min-height:32px;line-height:1.5;}
+
+  .result{display:none;}
+  .result.show{display:block;}
+  .result-top{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .result-badge{font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 9px;border-radius:999px;}
+  .result-badge.ok{background:var(--accent-2-dim);color:var(--accent-2);}
+  .result-badge.warn{background:#3A2E14;color:var(--warn);}
+  .result-sub{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5;}
+  .download-btn{display:block;width:100%;text-align:center;text-decoration:none;background:var(--accent-2);color:#062019;border:none;font-weight:700;font-size:14.5px;padding:14px;border-radius:10px;margin-top:18px;font-family:var(--sans);transition:transform .08s ease;}
+  .download-btn:active{transform:scale(.98);}
+  .download-btn.small{padding:9px;font-size:12.5px;margin-top:0;border-radius:8px;}
+  .again{display:block;text-align:center;margin-top:12px;font-size:12.5px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:var(--sans);width:100%;text-decoration:underline;text-underline-offset:3px;}
+
+  .resultlist{display:none;}
+  .resultlist.show{display:block;}
+  .rl-row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px;}
+  .rl-info{flex:1;min-width:0;}
+  .rl-info .n{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rl-info .s{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono);}
+  .rl-badge{font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:2px 7px;border-radius:999px;flex-shrink:0;}
+  .rl-badge.ok{background:var(--accent-2-dim);color:var(--accent-2);}
+  .rl-badge.warn{background:#3A2E14;color:var(--warn);}
+
+  .err{color:var(--warn);font-size:12.5px;margin-top:10px;display:none;}
+  .err.show{display:block;}
+
+  @media (max-width:480px){ h1{font-size:22px;} .bignum{font-size:23px;} .mode-btn{font-size:11.5px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Utilitas File</div>
+  <h1>Gabung &amp; Kompres PDF</h1>
+  <p class="subtitle">Gabungkan beberapa PDF jadi satu, kompres ke ukuran target, atau lakukan keduanya sekaligus.</p>
+
+  <div class="panel">
+    <div class="modes">
+      <button class="mode-btn" data-mode="gabung">Gabung Saja</button>
+      <button class="mode-btn" data-mode="kompres">Kompres Saja</button>
+      <button class="mode-btn active" data-mode="gabungkompres">Gabung + Kompres</button>
+    </div>
+
+    <div class="dropzone" id="dropzone">
+      <div class="icon">PDF</div>
+      <div class="main" id="dzMain">Seret satu atau beberapa PDF ke sini, atau klik untuk pilih</div>
+      <div class="hint">Bisa pilih banyak file sekaligus</div>
+      <input type="file" id="fileInput" accept="application/pdf" multiple>
+    </div>
+
+    <div class="filelist" id="filelist">
+      <div class="filelist-head">
+        <span class="label" id="filelistLabel">File (0)</span>
+        <span class="total" id="filelistTotal">-</span>
+      </div>
+      <div id="filerows"></div>
+      <div class="addmore" id="addMore">+ Tambah file lain</div>
+
+      <div class="target-section" id="targetSection">
+        <div class="target-row">
+          <div class="field">
+            <label class="flabel">Target ukuran output</label>
+            <input type="number" id="targetValue" value="2" min="0.05" step="0.1">
+          </div>
+          <select id="targetUnit">
+            <option value="MB" selected>MB</option>
+            <option value="KB">KB</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="note" id="modeNote"></div>
+
+      <button class="cta" id="actionBtn" disabled>Gabung &amp; Kompres</button>
+      <div class="err" id="errBox"></div>
+    </div>
+  </div>
+
+  <div class="panel gauge-wrap" id="gaugeWrap">
+    <div class="gauge-label"><span>Ukuran saat ini</span><span id="gaugeCurrentLabel">-</span></div>
+    <div class="track">
+      <div class="fill" id="gaugeFill"></div>
+      <div class="target-marker" id="targetMarker"></div>
+    </div>
+    <div class="gauge-ends"><span>0</span><span id="gaugeOrigLabel">-</span></div>
+    <div class="progress-text" id="progressText">Menyiapkan…</div>
+  </div>
+
+  <div class="panel result" id="resultPanel">
+    <div class="result-top"><span class="result-badge" id="resultBadge">SELESAI</span></div>
+    <div class="bignum" id="finalSize">0 <span class="unit">MB</span></div>
+    <div class="result-sub" id="resultSub"></div>
+    <a class="download-btn" id="downloadBtn" download="hasil.pdf">Unduh PDF</a>
+    <button class="again" id="againBtn">Mulai lagi</button>
+  </div>
+
+  <div class="panel resultlist" id="resultListPanel">
+    <div class="filelist-head"><span class="label">Hasil per file</span></div>
+    <div id="resultRows"></div>
+    <button class="again" id="againBtn2">Mulai lagi</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+let mode = 'gabungkompres'; // 'gabung' | 'kompres' | 'gabungkompres'
+let files = []; // {id, file, arrayBuffer, pdfjsDoc, pageCount, size}
+let seq = 0;
+
+const dropzone = document.getElementById('dropzone');
+const dzMain = document.getElementById('dzMain');
+const fileInput = document.getElementById('fileInput');
+const filelist = document.getElementById('filelist');
+const filelistLabel = document.getElementById('filelistLabel');
+const filelistTotal = document.getElementById('filelistTotal');
+const filerows = document.getElementById('filerows');
+const addMore = document.getElementById('addMore');
+const targetSection = document.getElementById('targetSection');
+const targetValue = document.getElementById('targetValue');
+const targetUnit = document.getElementById('targetUnit');
+const modeNote = document.getElementById('modeNote');
+const actionBtn = document.getElementById('actionBtn');
+const errBox = document.getElementById('errBox');
+
+const gaugeWrap = document.getElementById('gaugeWrap');
+const gaugeFill = document.getElementById('gaugeFill');
+const targetMarker = document.getElementById('targetMarker');
+const gaugeCurrentLabel = document.getElementById('gaugeCurrentLabel');
+const gaugeOrigLabel = document.getElementById('gaugeOrigLabel');
+const progressText = document.getElementById('progressText');
+
+const resultPanel = document.getElementById('resultPanel');
+const resultBadge = document.getElementById('resultBadge');
+const finalSizeEl = document.getElementById('finalSize');
+const resultSub = document.getElementById('resultSub');
+const downloadBtn = document.getElementById('downloadBtn');
+const againBtn = document.getElementById('againBtn');
+
+const resultListPanel = document.getElementById('resultListPanel');
+const resultRows = document.getElementById('resultRows');
+const againBtn2 = document.getElementById('againBtn2');
+
+function fmtSize(bytes){
+  if(bytes >= 1024*1024) return (bytes/(1024*1024)).toFixed(2)+' MB';
+  return (bytes/1024).toFixed(0)+' KB';
+}
+function bigNum(bytes){
+  const mb = bytes/(1024*1024);
+  if(mb >= 1) return {num:mb.toFixed(2), unit:'MB'};
+  return {num:(bytes/1024).toFixed(0), unit:'KB'};
+}
+function nextFrame(){ return new Promise(r=>requestAnimationFrame(r)); }
+function showError(msg){ errBox.textContent = msg; errBox.classList.add('show'); }
+function clearError(){ errBox.textContent=''; errBox.classList.remove('show'); }
+
+/* ---------- mode switching ---------- */
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    mode = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    applyModeUI();
+    hideOutputs();
+  });
+});
+
+function applyModeUI(){
+  if(mode==='gabung'){
+    targetSection.classList.remove('show');
+    actionBtn.textContent = 'Gabungkan & Unduh';
+    modeNote.innerHTML = 'File akan digabung apa adanya sesuai urutan di bawah, <b>tanpa</b> mengubah kualitas — teks tetap bisa diseleksi dan gambar tetap tajam.';
+    dzMain.textContent = 'Seret beberapa PDF untuk digabung, atau klik untuk pilih';
+  }else if(mode==='kompres'){
+    targetSection.classList.add('show');
+    actionBtn.textContent = files.length > 1 ? 'Kompres Semua File' : 'Kompres Sekarang';
+    modeNote.innerHTML = 'Setiap file dikompres <b>terpisah</b> ke target ukuran yang sama (hasil tetap beberapa file). Teks pada hasil akan menjadi gambar dan tidak bisa diseleksi.';
+    dzMain.textContent = 'Seret satu atau beberapa PDF untuk dikompres, atau klik untuk pilih';
+  }else{
+    targetSection.classList.add('show');
+    actionBtn.textContent = 'Gabung & Kompres';
+    modeNote.innerHTML = 'Semua file digabung jadi satu PDF sesuai urutan di bawah, lalu hasil gabungan dikompres ke target ukuran. Teks pada hasil akan menjadi gambar dan tidak bisa diseleksi.';
+    dzMain.textContent = 'Seret beberapa PDF untuk digabung & dikompres, atau klik untuk pilih';
+  }
+  updateActionEnabled();
+}
+
+function hideOutputs(){
+  resultPanel.classList.remove('show');
+  resultListPanel.classList.remove('show');
+  gaugeWrap.classList.remove('show');
+  clearError();
+}
+
+/* ---------- file intake ---------- */
+dropzone.addEventListener('click', ()=>fileInput.click());
+addMore.addEventListener('click', ()=>fileInput.click());
+['dragenter','dragover'].forEach(ev=>dropzone.addEventListener(ev, e=>{e.preventDefault();dropzone.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>dropzone.addEventListener(ev, e=>{e.preventDefault();dropzone.classList.remove('drag');}));
+dropzone.addEventListener('drop', e=>{ addFiles(Array.from(e.dataTransfer.files)); });
+fileInput.addEventListener('change', e=>{ addFiles(Array.from(e.target.files)); fileInput.value=''; });
+
+async function addFiles(fileArr){
+  clearError();
+  hideOutputs();
+  const pdfs = fileArr.filter(f=> f.type==='application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+  if(pdfs.length < fileArr.length) showError('Beberapa file dilewati karena bukan PDF.');
+  for(const f of pdfs){
+    const entry = { id: 'f'+(seq++), file:f, arrayBuffer:null, pdfjsDoc:null, pageCount:0, size:f.size, status:'loading' };
+    files.push(entry);
+    renderFileRows();
+    try{
+      entry.arrayBuffer = await f.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({data: entry.arrayBuffer.slice(0)});
+      entry.pdfjsDoc = await loadingTask.promise;
+      entry.pageCount = entry.pdfjsDoc.numPages;
+      entry.status = 'ready';
+    }catch(err){
+      entry.status = 'error';
+    }
+    renderFileRows();
+  }
+  applyModeUI();
+}
+
+function renderFileRows(){
+  filelist.classList.toggle('show', files.length>0);
+  filelistLabel.textContent = 'File ('+files.length+')';
+  const total = files.reduce((a,f)=>a+f.size,0);
+  filelistTotal.textContent = fmtSize(total);
+  filerows.innerHTML = '';
+  files.forEach((f,idx)=>{
+    const row = document.createElement('div');
+    row.className = 'filerow';
+    row.draggable = true;
+    row.dataset.id = f.id;
+    const statusTxt = f.status==='loading' ? 'Memuat…' : f.status==='error' ? 'Gagal dibaca' : (f.pageCount+' hal • '+fmtSize(f.size));
+    row.innerHTML = `
+      <span class="order">${idx+1}</span>
+      <div class="fname"><div class="n">${f.file.name}</div><div class="s">${statusTxt}</div></div>
+      <div class="btns">
+        <button data-act="up" title="Naik">&uarr;</button>
+        <button data-act="down" title="Turun">&darr;</button>
+        <button data-act="rm" class="rm" title="Hapus">&times;</button>
+      </div>`;
+    row.addEventListener('dragstart', e=>{ row.classList.add('dragging'); e.dataTransfer.setData('text/plain', f.id); });
+    row.addEventListener('dragend', ()=> row.classList.remove('dragging'));
+    row.addEventListener('dragover', e=> e.preventDefault());
+    row.addEventListener('drop', e=>{
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData('text/plain');
+      reorderById(draggedId, f.id);
+    });
+    row.querySelector('[data-act=up]').addEventListener('click', ()=>moveFile(idx,-1));
+    row.querySelector('[data-act=down]').addEventListener('click', ()=>moveFile(idx,1));
+    row.querySelector('[data-act=rm]').addEventListener('click', ()=>{ files.splice(idx,1); renderFileRows(); applyModeUI(); hideOutputs(); });
+    filerows.appendChild(row);
+  });
+  updateActionEnabled();
+}
+
+function moveFile(idx, dir){
+  const newIdx = idx+dir;
+  if(newIdx<0 || newIdx>=files.length) return;
+  const [item] = files.splice(idx,1);
+  files.splice(newIdx,0,item);
+  renderFileRows();
+  hideOutputs();
+}
+function reorderById(draggedId, targetId){
+  if(draggedId===targetId) return;
+  const from = files.findIndex(f=>f.id===draggedId);
+  const to = files.findIndex(f=>f.id===targetId);
+  if(from<0||to<0) return;
+  const [item] = files.splice(from,1);
+  files.splice(to,0,item);
+  renderFileRows();
+  hideOutputs();
+}
+
+function updateActionEnabled(){
+  const readyCount = files.filter(f=>f.status==='ready').length;
+  actionBtn.disabled = readyCount===0;
+  if(mode==='kompres') actionBtn.textContent = readyCount>1 ? 'Kompres Semua File' : 'Kompres Sekarang';
+}
+
+/* ---------- core render/compress helpers ---------- */
+function canvasToJpegBytes(canvas, quality){
+  return new Promise(resolve=>{
+    canvas.toBlob(async blob=>{
+      const buf = await blob.arrayBuffer();
+      resolve(new Uint8Array(buf));
+    }, 'image/jpeg', quality);
+  });
+}
+
+async function renderPagesOfDoc(pdfjsDoc, pageCount, renderScale, onProgress){
+  const infos = [];
+  for(let i=1;i<=pageCount;i++){
+    const page = await pdfjsDoc.getPage(i);
+    const viewport = page.getViewport({scale: renderScale});
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(viewport.width));
+    canvas.height = Math.max(1, Math.round(viewport.height));
+    const ctx = canvas.getContext('2d');
+    await page.render({canvasContext: ctx, viewport}).promise;
+    const ptViewport = page.getViewport({scale:1});
+    infos.push({canvas, widthPt: ptViewport.width, heightPt: ptViewport.height});
+    if(onProgress) onProgress(i, pageCount);
+    await nextFrame();
+  }
+  return infos;
+}
+
+async function buildPdfFromCanvasInfos(canvasInfos, quality, scaleFactor){
+  const pdfDoc = await PDFLib.PDFDocument.create();
+  for(const info of canvasInfos){
+    let src = info.canvas;
+    if(scaleFactor < 1){
+      const tmp = document.createElement('canvas');
+      tmp.width = Math.max(1, Math.round(info.canvas.width*scaleFactor));
+      tmp.height = Math.max(1, Math.round(info.canvas.height*scaleFactor));
+      const tctx = tmp.getContext('2d');
+      tctx.drawImage(info.canvas, 0, 0, tmp.width, tmp.height);
+      src = tmp;
+    }
+    const jpegBytes = await canvasToJpegBytes(src, quality);
+    const jpg = await pdfDoc.embedJpg(jpegBytes);
+    const page = pdfDoc.addPage([info.widthPt, info.heightPt]);
+    page.drawImage(jpg, {x:0, y:0, width:info.widthPt, height:info.heightPt});
+  }
+  return await pdfDoc.save();
+}
+
+function updateGauge(currentBytes, target, original){
+  const pct = Math.min(100, (currentBytes/original)*100);
+  const targetPct = Math.min(100, (target/original)*100);
+  gaugeFill.style.width = pct+'%';
+  targetMarker.style.left = targetPct+'%';
+  gaugeFill.classList.toggle('hit', currentBytes <= target);
+  gaugeCurrentLabel.textContent = fmtSize(currentBytes);
+  gaugeOrigLabel.textContent = fmtSize(original);
+}
+
+const QUALITY_STEPS = [0.85,0.7,0.55,0.4,0.28,0.18,0.1,0.06];
+const SCALE_STEPS = [1, 0.7, 0.5, 0.35];
+
+// runs the quality/scale search over a fixed set of pre-rendered canvasInfos
+async function searchCompress(canvasInfos, target, originalSize, labelPrefix){
+  let best = null, hit = false;
+  outer:
+  for(const scaleFactor of SCALE_STEPS){
+    for(const quality of QUALITY_STEPS){
+      progressText.textContent = (labelPrefix?labelPrefix+'\n':'')+'Mencoba kualitas '+Math.round(quality*100)+'%, resolusi '+Math.round(scaleFactor*100)+'%…';
+      await nextFrame();
+      const bytes = await buildPdfFromCanvasInfos(canvasInfos, quality, scaleFactor);
+      updateGauge(bytes.length, target, originalSize);
+      if(!best || bytes.length < best.bytes.length) best = {bytes, quality, scaleFactor};
+      if(bytes.length <= target){ hit = true; break outer; }
+      await nextFrame();
+    }
+  }
+  return {bytes: best.bytes, hit};
+}
+
+async function mergeLossless(orderedFiles){
+  const outDoc = await PDFLib.PDFDocument.create();
+  for(const f of orderedFiles){
+    const srcDoc = await PDFLib.PDFDocument.load(f.arrayBuffer.slice(0), {ignoreEncryption:true});
+    const idxs = srcDoc.getPageIndices();
+    const copied = await outDoc.copyPages(srcDoc, idxs);
+    copied.forEach(p=>outDoc.addPage(p));
+  }
+  return await outDoc.save();
+}
+
+/* ---------- main action ---------- */
+actionBtn.addEventListener('click', runAction);
+againBtn.addEventListener('click', resetAll);
+againBtn2.addEventListener('click', resetAll);
+
+function resetAll(){
+  files = [];
+  filerows.innerHTML='';
+  filelist.classList.remove('show');
+  hideOutputs();
+  applyModeUI();
+}
+
+function targetBytes(){
+  const v = parseFloat(targetValue.value) || 0;
+  return targetUnit.value === 'MB' ? v*1024*1024 : v*1024;
+}
+
+async function runAction(){
+  clearError();
+  hideOutputs();
+  const ready = files.filter(f=>f.status==='ready');
+  if(ready.length===0){ showError('Tidak ada file yang siap diproses.'); return; }
+
+  actionBtn.disabled = true;
+
+  try{
+    if(mode==='gabung'){
+      await doMergeOnly(ready);
+    }else if(mode==='kompres'){
+      await doCompressEach(ready);
+    }else{
+      await doMergeAndCompress(ready);
+    }
+  }catch(err){
+    showError('Terjadi kesalahan saat memproses: '+(err && err.message ? err.message : err));
+  }
+
+  actionBtn.disabled = false;
+  updateActionEnabled();
+}
+
+async function doMergeOnly(ready){
+  progressText.textContent = 'Menggabungkan file…';
+  gaugeWrap.classList.remove('show');
+  const bytes = await mergeLossless(ready);
+  const {num,unit} = bigNum(bytes.length);
+  resultBadge.textContent = 'DIGABUNG';
+  resultBadge.className = 'result-badge ok';
+  finalSizeEl.innerHTML = num+' <span class="unit">'+unit+'</span>';
+  resultSub.textContent = ready.length+' file digabung jadi satu PDF, kualitas asli tetap terjaga.';
+  setDownload(downloadBtn, bytes, 'gabungan.pdf');
+  resultPanel.classList.add('show');
+}
+
+async function doMergeAndCompress(ready){
+  const target = targetBytes();
+  if(!target || target<=0){ showError('Isi target ukuran yang valid.'); return; }
+  const originalTotal = ready.reduce((a,f)=>a+f.size,0);
+
+  if(originalTotal <= target){
+    // sudah kecil: gabung lossless saja, tak perlu turunkan kualitas
+    progressText.textContent = 'Total ukuran sudah di bawah target, menggabungkan tanpa kompresi…';
+    const bytes = await mergeLossless(ready);
+    resultBadge.textContent = 'DIGABUNG (SUDAH DI BAWAH TARGET)';
+    resultBadge.className = 'result-badge ok';
+    const {num,unit} = bigNum(bytes.length);
+    finalSizeEl.innerHTML = num+' <span class="unit">'+unit+'</span>';
+    resultSub.textContent = 'Total ukuran gabungan sudah di bawah target '+fmtSize(target)+', jadi tidak perlu dikompres.';
+    setDownload(downloadBtn, bytes, 'gabungan.pdf');
+    resultPanel.classList.add('show');
+    return;
+  }
+
+  gaugeWrap.classList.add('show');
+  updateGauge(originalTotal, target, originalTotal);
+  progressText.textContent = 'Menyiapkan halaman…';
+  await nextFrame();
+
+  const baseScale = 150/72;
+  let canvasInfos = [];
+  for(const f of ready){
+    const infos = await renderPagesOfDoc(f.pdfjsDoc, f.pageCount, baseScale, (i,n)=>{
+      progressText.textContent = 'Merender '+f.file.name+' — halaman '+i+'/'+n+'…';
+    });
+    canvasInfos = canvasInfos.concat(infos);
+  }
+
+  const {bytes, hit} = await searchCompress(canvasInfos, target, originalTotal, null);
+  gaugeWrap.classList.remove('show');
+
+  const reduction = Math.round((1-bytes.length/originalTotal)*100);
+  resultBadge.textContent = hit ? 'TARGET TERCAPAI' : 'SEKECIL MUNGKIN';
+  resultBadge.className = 'result-badge '+(hit?'ok':'warn');
+  const {num,unit} = bigNum(bytes.length);
+  finalSizeEl.innerHTML = num+' <span class="unit">'+unit+'</span>';
+  resultSub.textContent = hit
+    ? (ready.length+' file digabung, berkurang '+reduction+'% dari total asli ('+fmtSize(originalTotal)+'), sudah di bawah target '+fmtSize(target)+'.')
+    : ('Sudah dicoba sampai kualitas & resolusi paling rendah, belum mencapai target '+fmtSize(target)+'. Ini hasil paling kecil, berkurang '+reduction+'% dari total asli.');
+  setDownload(downloadBtn, bytes, 'gabungan-kompres.pdf');
+  resultPanel.classList.add('show');
+}
+
+async function doCompressEach(ready){
+  const target = targetBytes();
+  if(!target || target<=0){ showError('Isi target ukuran yang valid.'); return; }
+
+  gaugeWrap.classList.add('show');
+  const results = [];
+
+  for(let idx=0; idx<ready.length; idx++){
+    const f = ready[idx];
+    const labelPrefix = 'File '+(idx+1)+'/'+ready.length+': '+f.file.name;
+
+    if(f.size <= target){
+      progressText.textContent = labelPrefix+' — sudah di bawah target, dilewati.';
+      updateGauge(f.size, target, f.size);
+      await nextFrame();
+      results.push({name:f.file.name, bytes:f.arrayBuffer, hit:true, skipped:true});
+      continue;
+    }
+
+    updateGauge(f.size, target, f.size);
+    progressText.textContent = labelPrefix+' — menyiapkan…';
+    await nextFrame();
+    const baseScale = 150/72;
+    const canvasInfos = await renderPagesOfDoc(f.pdfjsDoc, f.pageCount, baseScale, (i,n)=>{
+      progressText.textContent = labelPrefix+' — merender halaman '+i+'/'+n+'…';
+    });
+    const {bytes, hit} = await searchCompress(canvasInfos, target, f.size, labelPrefix);
+    results.push({name:f.file.name, bytes, hit, skipped:false, originalSize:f.size});
+  }
+
+  gaugeWrap.classList.remove('show');
+  renderResultList(results, target);
+}
+
+function renderResultList(results, target){
+  resultRows.innerHTML = '';
+  results.forEach(r=>{
+    const bytesArr = r.bytes instanceof Uint8Array ? r.bytes : new Uint8Array(r.bytes);
+    const row = document.createElement('div');
+    row.className = 'rl-row';
+    const badgeCls = r.hit ? 'ok' : 'warn';
+    const badgeTxt = r.skipped ? 'SUDAH KECIL' : (r.hit ? 'TERCAPAI' : 'SEKECIL MUNGKIN');
+    row.innerHTML = `
+      <div class="rl-info">
+        <div class="n">${r.name}</div>
+        <div class="s">${fmtSize(bytesArr.length)}</div>
+      </div>
+      <span class="rl-badge ${badgeCls}">${badgeTxt}</span>
+      <a class="download-btn small" style="width:auto;flex-shrink:0;" download="${r.name.replace(/\.pdf$/i,'')}-kompres.pdf">Unduh</a>
+    `;
+    const a = row.querySelector('a');
+    const blob = new Blob([bytesArr], {type:'application/pdf'});
+    a.href = URL.createObjectURL(blob);
+    resultRows.appendChild(row);
+  });
+  resultListPanel.classList.add('show');
+}
+
+function setDownload(anchorEl, bytes, filename){
+  const bytesArr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const blob = new Blob([bytesArr], {type:'application/pdf'});
+  anchorEl.href = URL.createObjectURL(blob);
+  anchorEl.setAttribute('download', filename);
+}
+
+applyModeUI();
+</script>
+</body>
+</html>
